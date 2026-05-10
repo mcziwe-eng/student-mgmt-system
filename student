@@ -1,0 +1,251 @@
+# Student Node for Linked List
+class Student:
+    def __init__(self, student_id, name, program, year):
+        self.id = student_id
+        self.name = name
+        self.program = program
+        self.year = year
+        self.next = None
+
+
+class StudentManagementSystem:
+    def __init__(self):
+        self.head = None  # Linked List
+        self.hash_table = {}  # Hash Table
+        self.stack = []  # Stack for undo
+
+    # Add Student
+    def add_student(self, student_id, name, program, year):
+        new_student = Student(student_id, name, program, year)
+
+        # Insert into linked list
+        new_student.next = self.head
+        self.head = new_student
+
+        # Insert into hash table
+        self.hash_table[student_id] = new_student
+        print("Student added successfully.")
+
+    # Search Student
+    def search_student(self, student_id):
+        if student_id in self.hash_table:
+            s = self.hash_table[student_id]
+            print(s.id, s.name, s.program, s.year)
+        else:
+            print("Student not found.")
+
+    # Update Student
+    def update_student(self, student_id, name, program, year):
+        if student_id in self.hash_table:
+            s = self.hash_table[student_id]
+            s.name = name
+            s.program = program
+            s.year = year
+            print("Student updated.")
+        else:
+            print("Student not found.")
+
+    # Delete Student
+    def delete_student(self, student_id):
+        prev = None
+        curr = self.head
+
+        while curr:
+            if curr.id == student_id:
+                # Remove from linked list
+                if prev:
+                    prev.next = curr.next
+                else:
+                    self.head = curr.next
+
+                # Remove from hash table
+                del self.hash_table[student_id]
+
+                # Push to stack
+                self.stack.append(curr)
+
+                print("Student deleted.")
+                return
+            prev = curr
+            curr = curr.next
+
+        print("Student not found.")
+
+    # Undo Delete
+    def undo_delete(self):
+        if self.stack:
+            student = self.stack.pop()
+            self.add_student(student.id, student.name, student.program, student.year)
+            print("Undo successful.")
+        else:
+            print("Nothing to undo.")
+
+    # Display Students
+    def display_students(self):
+        curr = self.head
+        while curr:
+            print(curr.id, curr.name, curr.program, curr.year)
+            curr = curr.next
+import tkinter as tk
+from tkinter import ttk, messagebox
+
+# Data Structures
+students = {}     # Hash Table
+undo_stack = []   # Stack
+
+# ---------- Functions ----------
+def clear_fields():
+    entry_id.delete(0, tk.END)
+    entry_name.delete(0, tk.END)
+    entry_program.delete(0, tk.END)
+    entry_year.delete(0, tk.END)
+
+def refresh_table():
+    for row in tree.get_children():
+        tree.delete(row)
+    for sid, s in students.items():
+        tree.insert("", tk.END, values=(sid, s["name"], s["program"], s["year"]))
+
+def add_student():
+    sid = entry_id.get()
+    name = entry_name.get()
+    program = entry_program.get()
+    year = entry_year.get()
+
+    if not sid or not name:
+        messagebox.showerror("Error", "ID and Name required!")
+        return
+
+    if sid in students:
+        messagebox.showerror("Error", "Student already exists!")
+        return
+
+    students[sid] = {"name": name, "program": program, "year": year}
+    refresh_table()
+    clear_fields()
+
+def search_student():
+    sid = entry_id.get()
+    if sid in students:
+        s = students[sid]
+        entry_name.delete(0, tk.END)
+        entry_program.delete(0, tk.END)
+        entry_year.delete(0, tk.END)
+
+        entry_name.insert(0, s["name"])
+        entry_program.insert(0, s["program"])
+        entry_year.insert(0, s["year"])
+    else:
+        messagebox.showerror("Error", "Student not found!")
+
+def update_student():
+    sid = entry_id.get()
+    if sid in students:
+        students[sid] = {
+            "name": entry_name.get(),
+            "program": entry_program.get(),
+            "year": entry_year.get()
+        }
+        refresh_table()
+        clear_fields()
+    else:
+        messagebox.showerror("Error", "Student not found!")
+
+def delete_student():
+    selected = tree.selection()
+
+    if not selected:
+        messagebox.showerror("Error", "Please select a student to delete!")
+        return
+
+    item = selected[0]
+    values = tree.item(item, "values")
+
+    if not values:
+        messagebox.showerror("Error", "Invalid selection!")
+        return
+
+    sid = values[0]
+
+    if sid in students:
+        undo_stack.append((sid, students[sid]))
+        del students[sid]
+        refresh_table()
+    else:
+        messagebox.showerror("Error", "Student not found!")
+def undo_delete():
+    if not undo_stack:
+        messagebox.showerror("Error", "Nothing to undo!")
+        return
+
+    sid, data = undo_stack.pop()
+    students[sid] = data
+    refresh_table()
+def on_row_select(event):
+    selected = tree.selection()
+    if selected:
+        values = tree.item(selected[0])["values"]
+        clear_fields()
+        entry_id.insert(0, values[0])
+        entry_name.insert(0, values[1])
+        entry_program.insert(0, values[2])
+        entry_year.insert(0, values[3])
+
+# ---------- Window ----------
+root = tk.Tk()
+root.title("Student Record Management System")
+root.geometry("750x500")
+root.configure(bg="#f4f6f7")
+
+style = ttk.Style()
+style.theme_use("clam")
+
+# ---------- Frames ----------
+frame_form = tk.Frame(root, bg="#f4f6f7")
+frame_form.pack(pady=10)
+
+frame_buttons = tk.Frame(root, bg="#f4f6f7")
+frame_buttons.pack(pady=10)
+
+frame_table = tk.Frame(root)
+frame_table.pack(pady=10)
+
+# ---------- Form ----------
+tk.Label(frame_form, text="Student ID", bg="#f4f6f7").grid(row=0, column=0, padx=5, pady=5)
+entry_id = ttk.Entry(frame_form)
+entry_id.grid(row=0, column=1, padx=5)
+
+tk.Label(frame_form, text="Name", bg="#f4f6f7").grid(row=0, column=2, padx=5)
+entry_name = ttk.Entry(frame_form)
+entry_name.grid(row=0, column=3, padx=5)
+
+tk.Label(frame_form, text="Program", bg="#f4f6f7").grid(row=1, column=0, padx=5)
+entry_program = ttk.Entry(frame_form)
+entry_program.grid(row=1, column=1, padx=5)
+
+tk.Label(frame_form, text="Year", bg="#f4f6f7").grid(row=1, column=2, padx=5)
+entry_year = ttk.Entry(frame_form)
+entry_year.grid(row=1, column=3, padx=5)
+
+# ---------- Buttons ----------
+ttk.Button(frame_buttons, text="Add", command=add_student).grid(row=0, column=0, padx=10)
+ttk.Button(frame_buttons, text="Search", command=search_student).grid(row=0, column=1, padx=10)
+ttk.Button(frame_buttons, text="Update", command=update_student).grid(row=0, column=2, padx=10)
+ttk.Button(frame_buttons, text="Delete", command=delete_student).grid(row=0, column=3, padx=10)
+ttk.Button(frame_buttons, text="Undo", command=undo_delete).grid(row=0, column=4, padx=10)
+ttk.Button(frame_buttons, text="Clear", command=clear_fields).grid(row=0, column=5, padx=10)
+
+# ---------- Table ----------
+columns = ("ID", "Name", "Program", "Year")
+tree = ttk.Treeview(frame_table, columns=columns, show="headings", height=10)
+
+for col in columns:
+    tree.heading(col, text=col)
+    tree.column(col, width=150)
+
+tree.pack()
+
+tree.bind("<<TreeviewSelect>>", on_row_select)
+
+# ---------- Run ----------
+root.mainloop()
